@@ -14,31 +14,93 @@
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
   <script type="text/javascript">
+  let data;
+
   var socket = io.connect('http://' + document.domain + ':' + location.port);
   console.log(document.domain, location.port);
   socket.on( 'connect', function() {
-    socket.emit( 'my event', {
-      data: 'User Connected'
+    socket.emit( 'connection', {
+      data: 'Connected'
     })
     var form = $( 'form' ).on( 'submit', function( e ) {
       e.preventDefault()
       let user_name = $( 'input.username' ).val()
       let user_input = $( 'input.message' ).val()
       socket.emit( 'my event', {
-				user_name : user_name,
-				message : user_input
+	user_name : user_name,
+	message : user_input
       })
     $( 'input.message' ).val( '' ).focus()
     })
   })
-  socket.on( 'my response', function( msg ) {
-  console.log( msg )
-  if( typeof msg.user_name !== 'undefined' ) {
+  socket.on( 'init-data', function( msg ) {
+  	console.log(msg);
+    data = msg;
+    graph();
     $( 'h3' ).remove()
-    $( 'div.message_holder' ).append( '<div><b style="color: #000">'+msg.user_name+'</b> '+msg.message+'</div>' )
+    $( 'div.message_holder' ).append( 
+		`<div> 
+			<p>${JSON.stringify(msg[0])}</p> 
+			<p>${JSON.stringify(msg[1])}</p>
+		</div>`
+	  )
+  })
+
+  // set the dimensions and margin of the graph
+  let margin = {top: 20, right: 20, bottom: 20, left: 50},
+  width = 960 - margin.left - margin.right,
+  height = 500 - margin.top - margin.bottom;
+
+  // parse the date / time
+  let parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+
+  // set the ranges
+  let x = d3.scaleTime().range([0, width]);
+  let y = d3.scaleLinear().range([height, 0]);
+
+  // define the line
+  let valueline = d3.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.temperature); });
+
+  // append the svg obgect to the body of the page
+  // appends a 'group' element to 'svg'
+  // moves the 'group' element to the top left margin
+  let svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+  
+  function graph() {
+    // format the data
+    data.forEach(function(d) {
+        d.date = parseTime(d.time);
+        d.temperature = +d.temperature;
+    });
+
+    // Scale the range of the data
+    x.domain(d3.extent(data, function(d) { return d.time; }));
+    y.domain([0, d3.max(data, function(d) { return d.temperature; })]);
+
+    // Add the valueline path.
+    svg.append("path")
+        .data(data)
+        .attr("class", "line")
+        .attr("d", valueline);
+
+    // Add the X Axis
+    svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+    // Add the Y Axis
+    svg.append("g")
+        .call(d3.axisLeft(y));
   }
-})
 </script>
 </body>
 </html>
