@@ -11,6 +11,13 @@
     <input type="text" class="message" placeholder="Messages"/>
     <input type="submit"/>
   </form>
+  <style>
+    .line {
+      fill: none;
+      stroke: steelblue;
+      stroke-width: 2px;
+    }
+  </style>
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
@@ -48,6 +55,8 @@
 	  )
   })
 
+  // D3 Graph Code
+
   // set the dimensions and margin of the graph
   let margin = {top: 20, right: 20, bottom: 20, left: 50},
   width = 960 - margin.left - margin.right,
@@ -62,10 +71,15 @@
 
   // define the line
   let valueline = d3.line()
-    .x(function(d) { return x(d.date); })
-    .y(function(d) { return y(d.temperature); });
-
-  // append the svg obgect to the body of the page
+    .x(function(d) { 
+      console.log("d.date = ", x(d.date));
+      return x(d.date); 
+    })
+    .y(function(d) { 
+      console.log("d.temperature = ", y(d.temperature));
+      return y(d.temperature);
+    });
+  // append the svg object to the body of the page
   // appends a 'group' element to 'svg'
   // moves the 'group' element to the top left margin
   let svg = d3.select("body").append("svg")
@@ -83,12 +97,19 @@
     });
 
     // Scale the range of the data
-    x.domain(d3.extent(data, function(d) { return d.time; }));
-    y.domain([0, d3.max(data, function(d) { return d.temperature; })]);
+    console.log(d3.extent(data, (d) => { return d.date }));
+    x.domain(d3.extent(data, (d) => { return d.date; }));
+    let bounds = d3.extent(data, (d) => { return d.temperature; });
+    bounds[0] -= 5;
+    bounds[1] += 5;
+    y.domain(bounds); 
+    // d3.max(data, (d) => { return d.temperature; })]);
+
+    console.log(x(parseTime("2019-03-05 22:42:54")));
 
     // Add the valueline path.
     svg.append("path")
-        .data(data)
+        .data([data])
         .attr("class", "line")
         .attr("d", valueline);
 
@@ -100,6 +121,11 @@
     // Add the Y Axis
     svg.append("g")
         .call(d3.axisLeft(y));
+
+    // Second Y Axis
+    svg.append("g")
+      .attr("transform", "translate(" + width + ", 0)")
+      .call(d3.axisRight(y));
   }
 </script>
 </body>
