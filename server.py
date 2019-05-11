@@ -27,11 +27,10 @@ def add_data():
 # Provide 100 data points to a new connection
 @socketio.on('connection')
 def on_connection(json, methods=['GET', 'POST']):
-	data_cursor = mongo.db.temp_collection.find().sort('_id', 1)
+	data_cursor = mongo.db.temp_collection.find().sort('time', -1)
 	data = []
 	for doc in data_cursor:
-		if doc and len(data) < 150:
-			print(doc)
+		if doc and len(data) < 15000:
 			doc.pop('_id')
 			data.append(doc)
 		else:

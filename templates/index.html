@@ -4,17 +4,15 @@
   <title>Flask_Chat_App</title>
 </head>
 <body>
-  <h3 style='color: #ccc;font-size: 30px;'>No message yet..</h3>
-  <div class="message_holder"></div>
-  <form action="" method="POST">
-    <input type="text" class="username" placeholder="User Name"/>
-    <input type="text" class="message" placeholder="Messages"/>
-    <input type="submit"/>
-  </form>
   <style>
     .line {
       fill: none;
       stroke: steelblue;
+      stroke-width: 2px;
+    }
+    .line2 {
+      fill: none;
+      stroke: green;
       stroke-width: 2px;
     }
   </style>
@@ -46,13 +44,6 @@
   	console.log(msg);
     data = msg;
     graph();
-    $( 'h3' ).remove()
-    $( 'div.message_holder' ).append( 
-		`<div> 
-			<p>${JSON.stringify(msg[0])}</p> 
-			<p>${JSON.stringify(msg[1])}</p>
-		</div>`
-	  )
   })
 
   // D3 Graph Code
@@ -68,17 +59,25 @@
   // set the ranges
   let x = d3.scaleTime().range([0, width]);
   let y = d3.scaleLinear().range([height, 0]);
+  let z = d3.scaleLinear().range([height, 0]);
 
-  // define the line
-  let valueline = d3.line()
+  // define the temperature line
+  let valueline = d3.line() // temperature line
     .x(function(d) { 
-      console.log("d.date = ", x(d.date));
       return x(d.date); 
     })
     .y(function(d) { 
-      console.log("d.temperature = ", y(d.temperature));
       return y(d.temperature);
     });
+
+  let humidityline = d3.line()
+    .x(function(d) {
+      return x(d.date);
+    })
+    .y(function(d) {
+      return z(d.humidity);
+    });
+
   // append the svg object to the body of the page
   // appends a 'group' element to 'svg'
   // moves the 'group' element to the top left margin
@@ -94,24 +93,35 @@
     data.forEach(function(d) {
         d.date = parseTime(d.time);
         d.temperature = +d.temperature;
+        d.humidity = +d.humidity;
     });
 
     // Scale the range of the data
     console.log(d3.extent(data, (d) => { return d.date }));
     x.domain(d3.extent(data, (d) => { return d.date; }));
     let bounds = d3.extent(data, (d) => { return d.temperature; });
-    bounds[0] -= 5;
-    bounds[1] += 5;
-    y.domain(bounds); 
+    bounds[0] = Math.round(bounds[0]) - 5;
+    bounds[1] = Math.round(bounds[1]) + 5;
+    y.domain(bounds);
+    //recycling bounds for z axis
+    bounds = d3.extent(data, (d) => { return d.humidity; });
+    bounds[0] = Math.round(bounds[0]) - 5;
+    bounds[1] = Math.round(bounds[1]) + 5;
+    z.domain(bounds);
+ 
     // d3.max(data, (d) => { return d.temperature; })]);
 
-    console.log(x(parseTime("2019-03-05 22:42:54")));
-
-    // Add the valueline path.
+    // Add the temperature valueline path.
     svg.append("path")
         .data([data])
         .attr("class", "line")
         .attr("d", valueline);
+
+    // Add the humidity valueline path
+    svg.append("path")
+        .data([data])
+        .attr("class", "line2")
+        .attr("d", humidityline);
 
     // Add the X Axis
     svg.append("g")
@@ -122,10 +132,10 @@
     svg.append("g")
         .call(d3.axisLeft(y));
 
-    // Second Y Axis
+    // Second Y Axis (Z axis for humidity)
     svg.append("g")
       .attr("transform", "translate(" + width + ", 0)")
-      .call(d3.axisRight(y));
+      .call(d3.axisRight(z));
   }
 </script>
 </body>
