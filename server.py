@@ -11,15 +11,14 @@ mongo = PyMongo(app)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-# Connected clients
-users = []
-
 # Add a data point into Mongo
 @app.route('/add', methods=['POST'])
 def add_data():
   if request.method == 'POST':
     data = request.get_json()
     print(data)
+    #trigger an update event for the clients
+    socketio.emit('update-data', data)
     mongo.db.temp_collection.insert_one(data)
     return f'Added entry: {data}'
   else:
@@ -28,7 +27,6 @@ def add_data():
 # Provide 100 data points to a new connection
 @socketio.on('connection')
 def on_connection(json, methods=['GET', 'POST']):
-  users.append(request.sid)
   data_cursor = mongo.db.temp_collection.find().sort('time', -1)
   data = []
   for doc in data_cursor:

@@ -4,6 +4,9 @@
   <title>Flask_Chat_App</title>
 </head>
 <body>
+  <button>Hour</button>
+  <button>Day</button>
+  <button>Week</button>
   <style>
     .line {
       fill: none;
@@ -25,16 +28,25 @@
 
   let socket = io.connect('http://' + document.domain + ':' + location.port + '/');
   console.log(document.domain, location.port);
-  socket.on( 'connect', function() {
+  socket.on('connect', function() {
     socket.emit( 'connection', {
       data: 'Connected'
     })
   });
-  socket.on( 'init-data', function( msg ) {
+
+  socket.on('init-data', function( msg ) {
     console.log(msg);
     data = msg;
     graph();
-    initialized = true;
+  });
+
+  socket.on('update-data', (newPoint) => {
+    console.log(newPoint);
+    data.pop();
+    cleanData(newPoint);
+    data.unshift(newPoint);
+    update();
+    console.log(data);
   });
 
   // D3 Graph Code
@@ -79,16 +91,15 @@
     .attr("transform",
           "translate(" + margin.left + "," + margin.top + ")");
   
-  function graph() {
-    // format the data
-    data.forEach(function(d) {
-        d.date = parseTime(d.time);
-        d.temperature = +d.temperature;
-        d.humidity = +d.humidity;
-    });
+  // format the data
+  function cleanData(d) {
+    d.date = parseTime(d.time);
+    d.temperature = +d.temperature;
+    d.humidity = +d.humidity;
+  }
 
+  function setDomain() {
     // Scale the range of the data
-    console.log(d3.extent(data, (d) => { return d.date }));
     x.domain(d3.extent(data, (d) => { return d.date; }));
     let bounds = d3.extent(data, (d) => { return d.temperature; });
     bounds[0] = Math.round(bounds[0]) - 5;
@@ -99,35 +110,68 @@
     bounds[0] = Math.round(bounds[0]) - 5;
     bounds[1] = Math.round(bounds[1]) + 5;
     z.domain(bounds);
- 
+  }
+
+  function graph() {
+    data.forEach(cleanData);
+
+    setDomain(); 
     // d3.max(data, (d) => { return d.temperature; })]);
 
     // Add the temperature valueline path.
     svg.append("path")
-        .data([data])
-        .attr("class", "line")
-        .attr("d", valueline);
+      .data([data])
+      .attr("class", "line")
+      .attr("d", valueline);
 
     // Add the humidity valueline path
     svg.append("path")
-        .data([data])
-        .attr("class", "line2")
-        .attr("d", humidityline);
+      .data([data])
+      .attr("class", "line2")
+      .attr("d", humidityline);
 
     // Add the X Axis
     svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x));
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
 
     // Add the Y Axis
     svg.append("g")
-        .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y));
 
     // Second Y Axis (Z axis for humidity)
     svg.append("g")
       .attr("transform", "translate(" + width + ", 0)")
       .call(d3.axisRight(z));
   }
-</script>
+
+  function update() {
+    data.forEach(cleanData);
+
+    setDomain();
+
+    let svg = d3.select('body').transition();
+
+    svg.select('.line')
+      .duration(750)
+      .attr('d', valueline(data));
+
+    svg.select('.line2')
+      .duration(750)
+      .attr('d', humidityline(data));
+    
+    svg.select('.x.axis')
+      .duration(750)
+      .call(d3.axisBottom(x));
+
+    svg.select('.y.axis')
+      .duration(750)
+      .call(d3.axisLeft(y));
+
+    svg.select('.z.axis')
+      .duration(750)
+      .call(d3.axisRight(z));
+  }
+  </script>  
 </body>
 </html>
